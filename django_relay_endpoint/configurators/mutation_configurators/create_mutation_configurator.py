@@ -58,7 +58,7 @@ def configure_create_mutation(
             raise ValidationError(_(
                 "Field 'id' should not be provided when creating new objects. Instead you can provide a 'ClientMutationId' to identify the response"
                 ))
-        instance = cls.create_node()
+        instance = cls.create_node(info)
         cls.validate(data, instance, info)
         cls.update_instance(instance, data)
         instance.save()

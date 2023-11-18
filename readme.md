@@ -157,14 +157,14 @@ Class based permissions extend custom `BasePermission` class, which implements `
 
 Useful subclasses and tools
 -----
-The addon comes with builtin DjangoClientIdMutation abstract subclass, which implements following methods
+The addon comes with builtin DjangoClientIDMutation abstract subclass, which implements following methods
 - **get_queryset**: same as on graphen_django.DjangoObjectType
 - **get_node**: same as on graphen_django.DjangoObjectType
 - **create_node**: creates an empty instance of the given mode
 - **validate**: validates data via 'field_validators' and 'non_field_validators' supplied with the subclass of NodeType.
 - **update_instance**: set's the values on the instance from data. For to-many relations it uses the `add_<field_name>` and `remove_<field_name>` convention. First it adds than it removes. The client can pass both, and the relations will be added and removed consecutively before being saved. 
 
-N.B. DjangoClientIdMutation does not implement a `mutate_and_get_payload` classmethod, the developer must implement it on a subclass.
+N.B. DjangoClientIDMutation does not implement a `mutate_and_get_payload` classmethod, the developer must implement it on a subclass.
 
 
 
@@ -181,14 +181,14 @@ For additional information read the respective documentation:
 - **graphene-file-upload**: <https://github.com/lmcgartland/graphene-file-upload>
 
 
-
 Tip the author
 -----
-If this project has facilitated your job and saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping the author with some crypto:
+If this project has facilitated your job, saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping (donating) the author with some crypto:
 
 **Bitcoin**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
 
 Thank you!
+
 
 Client
 -----
