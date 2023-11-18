@@ -34,7 +34,9 @@ Installation
 
 Install using pip...
 
-```pip install git+https://github.com/Elawphant/django_relay_endpoint.git```
+```
+pip install git+https://github.com/Elawphant/django_relay_endpoint.git
+```
 
 How to use
 -----
@@ -119,7 +121,7 @@ Available options are as follows:
 
 - **mutation_operations**: Literal["create", "update", "delete"] - similar to query_operations, this limits the root field configuration, defaults to `["create", "update", "delete"]`.
 
-- **extra_kwargs**: Dict[str, Dict[str, Any]] - the mutation type fields are configured via assigned django form field; this option is similar to rest framework serializer `extra_kwargs`, which is a dictionary of field_names mapped to a dictionary of django form field kwargs. The configurator automatically maps the field to the respective form field: for field mapping see <https://docs.djangoproject.com/en/4.2/topics/forms/modelforms/#field-types>. For relations, it maps the fields to `graphene.List(graphene.ID, **field_kwargs)` `and graphene.ID(**field_kwargs)`, it will also infer the required from the declared `allow_blank` and `allow_null` parameters of the respective model.field.
+- **extra_kwargs**: Dict[str, Dict[str, Any]] - the mutation type fields are configured via assigned django form field; this option is similar to rest framework serializer `extra_kwargs`, which is a dictionary of field_names mapped to a dictionary of django form field kwargs. The configurator automatically maps the field to the respective form field: for field mapping see <https://docs.djangoproject.com/en/4.2/topics/forms/modelforms/#field-types>. For relations, it maps the fields to `graphene.List(graphene.ID, **field_kwargs)` `and graphene.ID(**field_kwargs)`, it will also infer the `required` parameter value from the declared `allow_blank` and `allow_null` parameters of the respective model.field.
 
 - **field_validators**: Dict[str, List[Callable]] - a dictionary of field_names mapped to the list of validators: see [Validators](#Validators).
 
