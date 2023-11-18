@@ -8,9 +8,14 @@ import inspect
 
 
 class GenericDjangoInputField(graphene.InputField):
+    """
+    An abstract subclass of graphene.InputField that handles the data cleaning via django form field.
+    """
+    
     form_field: forms.Field
 
     class Meta:
+        abstract = True
         form_field_class: type[forms.Field]
 
 
@@ -34,6 +39,10 @@ class GenericDjangoInputField(graphene.InputField):
         super().__init__(*args, **kwargs)
         
     def get_value(self, input) -> Any:
+        """
+        Does data cleaning via django form field 
+        """
+        
         return self.form_field.clean(super().get_value(input))
 
     

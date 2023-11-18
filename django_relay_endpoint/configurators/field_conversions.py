@@ -3,8 +3,8 @@ from django.db import models
 from django import forms
 import graphene
 from graphene_file_upload.scalars import Upload
-from . import fields
-from graphene.types.generic import GenericScalar  # Solution
+from graphene.types.generic import GenericScalar  # Use this for json-field instead of graphene.JSONField which keeps the data as string
+from typing import Type, Dict
 
 
 MODEL_TO_FORM_FIELD = {
@@ -72,21 +72,31 @@ MODEL_TO_SCALAR = {
 }
 
 
-def whichBooleanField(*args, **kwargs):
-    null = kwargs.get('null', False)
+def whichBooleanField(null = False):
+    """
+    Utility function for BooleanField conversion to BooleanField or NullBooleanField 
+    """
+
     if null:
         return forms.NullBooleanField
     return forms.BooleanField
 
 
-def configure_input_field(field: models.Field, custom_form_field_class: type[forms.Field] = None):
-    if isinstance(field, models.BooleanField):
-        field_class = custom_form_field_class or whichBooleanField(field)
-    else:
-        field_class = custom_form_field_class or MODEL_TO_FORM_FIELD[field.name]
+def configure_input_field(
+        field: Type[models.Field], 
+        field_extra_kwargs: Dict[str, dict] = {}, 
+        ):
+    """
+    A utility function that maps the model field to the form field.
 
-    field_class = type(f"{field.__class__.__name__}Input", (fields.GenericDjangoInputField,), {
-        "Meta": {
-            "form_field_class": field_class
-        },
-    })
+    Args:
+        field (models.Field): a django model field
+        custom_form_field_class (Type[forms.Field], optional): a custom form field class to supply custom field. Defaults to None.
+        field_extra_kwargs (Dict[str, dict]): extra kwargs for the field. Used for BooleanField conversion to BooleanField or NullBooleanField
+    """
+    
+    if issubclass(field, models.BooleanField):
+        field_class = whichBooleanField(field_extra_kwargs.get("null", False))
+    else:
+        field_class = MODEL_TO_FORM_FIELD.get(field, None) or MODEL_TO_FORM_FIELD[models.CharField] # fail silently to Charfield
+    return field_class

@@ -3,11 +3,16 @@
 import graphene
 from django.db import models
 from graphql_relay.node.node import from_global_id
-from graphene_django import DjangoObjectType
+from graphene_django import DjangoObjectType # This import is necessary. we export it in the model for easy of use
 from django.utils.translation import gettext_lazy as _
 
 
 class DjangoClientIDMutation(graphene.relay.ClientIDMutation):
+    """
+    An abstract subclass of graphene.relay.ClientIDMutation which implements 
+    `get_queryset`, `get_node`, `create_node`, `validate` and `update_instance` classmethods.
+    """
+
     class Meta:
         abstract=True
 
@@ -25,7 +30,7 @@ class DjangoClientIDMutation(graphene.relay.ClientIDMutation):
         Returns the node by id
         """
         queryset = cls.get_queryset(cls.model.objects, info)
-        instance = queryset.get(pk=from_global_id(id).id) # let graphene handle the DoesNotExist
+        instance = queryset.get(pk=id) # let graphene handle the DoesNotExist
         return instance
 
     @classmethod
@@ -39,16 +44,36 @@ class DjangoClientIDMutation(graphene.relay.ClientIDMutation):
 
     @classmethod
     def validate(cls, data: dict, not_updated_model_instance: models.Model, info: graphene.ResolveInfo):
+        """
+        Performs field and non_field validation.
+
+        Args:
+            data (dict): the data to be validated
+            not_updated_model_instance (models.Model): initial instance state before saving.
+            info (graphene.ResolveInfo): graphene info
+        """
         for field in cls.model._meta.get_fields():
             field: models.Field = field
 
             for validator in cls.field_validators.get(field.name, []):
-                validator(data.get(field.name))
+                validator(data.get(field.name), not_updated_model_instance, info)
         for validator in cls.non_field_validators:
-            validator(data)
+            validator(data, not_updated_model_instance, info)
 
     @classmethod
     def update_instance(cls, instance: models.Model, data: dict):
+        """
+        Sets values from data on teh instance.
+        For to-many relations uses add_<field_name> and remove_<field_name> to explicitly add or remove instances on the relations.
+
+        Args:
+            instance (models.Model): Django model instance to update
+            data (dict): the data
+
+        Raises:
+            model.DoesNotExist: if an for non existing model instance is provided for relations. The error includes the problematic ids.
+        """
+        
         model = cls.Meta.model
         for field in cls.model._meta.get_fields():
             # check the field type, resolve m2m and reverse foreign keys via add_<field_name> and remove_<field_name> fields

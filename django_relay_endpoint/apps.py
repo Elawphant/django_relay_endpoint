@@ -1,5 +1,5 @@
 from django.apps import AppConfig
 
 
-class DjangoGrapheneEndpointConfig(AppConfig):
-    name = 'django_graphene_endpoint'
+class DjangoRelayEndpointConfig(AppConfig):
+    name = 'django_relay_endpoint'

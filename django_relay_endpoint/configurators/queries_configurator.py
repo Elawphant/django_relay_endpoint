@@ -1,23 +1,20 @@
 
 import graphene
-from django.db import models
 from graphene_django.filter import DjangoFilterConnectionField
 from typing import Literal
 from .object_types import DjangoObjectType
+from typing import Type
 
 
 def configure_queries(
-    django_object_type: DjangoObjectType,
+    django_object_type: Type[DjangoObjectType],
     conventional_name: str,
     query_field_name: str = None,
     query_field_name_plural: str = None,
     query_operations: Literal["list", "detail"] = ["list", "detail"],
-    ) -> graphene.ObjectType:
-    """Configures relay node style query object type for single and multiple records, supports filtering via django_filter 
-
-    Args:
-
-        N.B. the fields on the query use <model._meta.model_name> (graphene.relay.Node.Field) and <model._meta.model_name>_list (DjangoFilterConnectionField) for root fields. App name is not used in the naming  
+    ) -> Type[graphene.ObjectType]:
+    """
+    Configures relay node style query object type for single and multiple records, supports filtering via django_filter 
 
     Returns:
     Args:

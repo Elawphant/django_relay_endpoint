@@ -1,4 +1,3 @@
 graphene-django
 graphene-file-upload
 django_filter
-django-graphene-permissions

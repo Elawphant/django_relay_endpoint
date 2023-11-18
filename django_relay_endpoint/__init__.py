@@ -1,5 +1,6 @@
-from .configurators.schema import AutoSchema
-from .configurators.node import NodeType
-from .configurators.fields import GenericDjangoInputField
-from .configurators.object_types import DjangoObjectType, DjangoClientIDMutation
-from .configurators.permissions import AllowAny, IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly, node_permission_checker, queryset_permission_checker
+from django_relay_endpoint.configurators.schema import SchemaConfigurator
+from django_relay_endpoint.configurators.node import NodeType
+from django_relay_endpoint.configurators.fields import GenericDjangoInputField
+from django_relay_endpoint.configurators.object_types import DjangoObjectType, DjangoClientIDMutation
+from django_relay_endpoint.configurators.permissions import BasePermission, AllowAny, IsAuthenticated, IsAdminUser, IsAuthenticatedOrReadOnly, node_permission_checker, queryset_permission_checker
+from graphene_file_upload.django import FileUploadGraphQLView
