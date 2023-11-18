@@ -1,4 +1,3 @@
-=====
 Django Relay Endpoint
 =====
 
@@ -8,15 +7,17 @@ The addon is made for "graphene_django".
 Table of Contents
 -----
 
-- [Requirements](#requirements)
-- [Installation](#installation)
-- [How to use](#how-to-use)
-- [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
-- [Validators](#validators)
-- [Permissions](#permissions)
-- [License](#license)
-- [Tip the author](#tip-the-author)
-- [Docs](#docs)
+- [Django Relay Endpoint](#django-relay-endpoint)
+  - [Table of Contents](#table-of-contents)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [How to use](#how-to-use)
+  - [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
+  - [Validators](#validators)
+  - [Permissions](#permissions)
+  - [License](#license)
+  - [Tip the author](#tip-the-author)
+  - [Docs](#docs)
 
 
 
