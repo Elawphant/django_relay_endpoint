@@ -172,6 +172,7 @@ See the MIT licens in the LICENSE file in the project.
 Tip the author
 -----
 If this project has facilitated your job and saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping the author with some crypto:
+
 **Bitcoin**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
 
 Thank you!
