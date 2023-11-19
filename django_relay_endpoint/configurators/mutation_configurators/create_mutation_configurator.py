@@ -41,6 +41,7 @@ def configure_create_mutation(
     Returns:
         Type[DjangoClientIDMutation]: The actual DjangoClientIDMutation type.
     """
+
     @classmethod
     def mutate_and_get_payload(cls, root, info, *args, **kwargs):
         """

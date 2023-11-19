@@ -43,6 +43,10 @@ def configure_input_object_type(
     """
     # generate an InputObjectType for our fields
     input_fields = {
+        'model': model,
+        'Meta': type("Meta", (), {
+            'model': model,
+        })
     }
     for field in model._meta.get_fields():
         field_kwargs = extra_kwargs.get(field.name, {})
@@ -67,13 +71,13 @@ def configure_input_object_type(
                 conversion = configure_input_field(field = field.__class__, field_extra_kwargs=field_kwargs)
                 _type = MODEL_TO_SCALAR.get(field.__class__, GenericScalar) # fail silently to GenericScalar
 
-                Meta = type("Meta", (), {
+                GenericDjangoInputFieldMeta = type("Meta", (), {
                     "form_field_class": conversion
                 })
 
                 # cast to form field
                 input_field_type = type(f"{field.__class__.__name__}", (GenericDjangoInputField,), {
-                        "Meta": Meta
+                        "Meta": GenericDjangoInputFieldMeta
                     })
                 input_fields[field.name] = input_field_type(_type, **field_kwargs)
 

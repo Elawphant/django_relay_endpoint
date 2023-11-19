@@ -2,6 +2,7 @@ import graphene
 from graphene_django import DjangoObjectType
 from typing import List, Dict, Type
 from django.db import models
+from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 from django_relay_endpoint.configurators.object_types import DjangoClientIDMutation
 from django_relay_endpoint.configurators.mutation_configurators.input_object_type_configurator import configure_input_object_type
@@ -54,8 +55,12 @@ def configure_update_mutation(
 
         model = abstract_mutation_type.model
         data = kwargs.get(input_field_name or "data", None)
-        client_mutation_id = kwargs.get("client_mutation_id", None) 
-        id = from_global_id(data.get("id", None)).id # let graphene handle the error
+        client_mutation_id = kwargs.get("client_mutation_id", None)
+        unresolved_id = data.get("id", None)
+        # raise a specific error if no id was provided
+        if not unresolved_id:
+            raise ValidationError(_("You must provide the id of the instance being mutated."))
+        id = from_global_id(unresolved_id).id
         instance = cls.get_node(info, id)
         cls.validate(data, instance, info)
         cls.update_instance(instance, data)
@@ -68,8 +73,8 @@ def configure_update_mutation(
         return cls(**mutation_kwargs)
 
     # add id as a required input field
-    UpdateInputObjectType = type(input_object_type.__class__.__name__, (input_object_type,), {
-        # add the id field
+    UpdateInputObjectType = type(input_object_type.__name__, (input_object_type,), {
+        # add the id scalar field
         "id": graphene.ID(required=True)
     })
 

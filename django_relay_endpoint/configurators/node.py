@@ -122,18 +122,17 @@ class NodeType:
             permissions=self.Meta.permissions,
             permission_classes=self.Meta.permission_classes,
         )
-        self.django_abstract_mutation_type = configure_abstract_mutation(
-            django_object_type=self.django_object_type,
-            conventional_name=self.conventional_name,
-            permissions=self.Meta.permissions,
-            permission_classes=self.Meta.permission_classes
-        )
-
         self.input_object_type = configure_input_object_type(
             model=self.model,
             conventional_name=self.conventional_name, 
             fields=fields, 
             extra_kwargs=self.Meta.extra_kwargs,
+        )
+        self.django_abstract_mutation_type = configure_abstract_mutation(
+            django_object_type=self.django_object_type,
+            conventional_name=self.conventional_name,
+            permissions=self.Meta.permissions,
+            permission_classes=self.Meta.permission_classes
         )
 
         
@@ -185,8 +184,8 @@ class NodeType:
             Type[graphene.ObjectType]: A configured extended graphene.ObjectType with mutation root fields
         """
         root = {}
-
         if "create" in self.Meta.mutation_operations:
+            
             create_mutation = configure_create_mutation(
                 input_object_type=self.input_object_type,
                 abstract_mutation_type=self.django_abstract_mutation_type,
