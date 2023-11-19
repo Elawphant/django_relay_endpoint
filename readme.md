@@ -47,7 +47,18 @@ pip install git+https://github.com/Elawphant/django_relay_endpoint.git
 
 How to use
 -----
-1. Declare your NodeTypes and pass it to the SchemaConfigurator to get the schema. e.g.
+1. Add `'graphene_django'` to your project's `settings.py`:
+
+```
+INSTALLED_APPS = [
+    # ... other apps and addons
+    'graphene_django',
+]
+
+```
+
+
+2. Declare your NodeTypes and pass it to the SchemaConfigurator to get the schema. e.g.
 
 ```
 # endpoint.py
@@ -87,7 +98,7 @@ schema = SchemaConfigurator([
 
 ```
 
-2. In your urls.py add the endpoint
+3. In your urls.py add the endpoint
 ```
 # urls.py
 from graphene_file_upload.django import FileUploadGraphQLView
