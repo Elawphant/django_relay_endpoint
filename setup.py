@@ -1,9 +1,11 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(
     name="django_graphene_endpoint",
     license="MIT",
     author="Gevorg Hakobyan",
+    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description_content_type='text/markdown',
 
     install_requires=[
         "graphene-django>=3.1.5",
