@@ -1,3 +1,29 @@
+Metadata-Version: 2.1
+Name: django-graphene-endpoint
+Version: 0.1
+Summary: Django addon to automatically configure graphql endpoints based on Django models.
+Home-page: https://github.com/Elawphant/django_relay_endpoint
+Author: Gevorg Hakobyan
+Author-email: gevorg.hakobyan@elawphant.am
+License: MIT
+Classifier: Environment :: Web Environment
+Classifier: Framework :: Django
+Classifier: Intended Audience :: Developers
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Operating System :: OS Independent
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3 :: Only
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+License-File: LICENSE
+
 Django Relay Endpoint
 =====
 "Django Relay Endpoint" is a Django addon that automatically configures a customizable graphql endpoint from models.
@@ -42,7 +68,7 @@ Installation
 Install using pip:
 
 ```
-pip install django-graphene-endpoint
+pip install git+https://github.com/Elawphant/django_relay_endpoint.git
 ```
 
 How to use
