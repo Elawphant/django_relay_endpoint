@@ -9,15 +9,13 @@ class SchemaConfigurator:
     Call SchemaConfigurator to return a configured graphene.Schema with queries and mutations
     """
 
-    query: Type[graphene.ObjectType]
-    mutation: Type[graphene.ObjectType]
+    query: List[graphene.ObjectType]
+    mutation: List[graphene.ObjectType]
 
     def __init__(self, node_types: List[Type[NodeType]]) -> None:
         instantiated_types = [node_type() for node_type in node_types]
-        class Query(*[node_type.configure_queries() for node_type in instantiated_types], graphene.ObjectType): pass
-        class Mutation(*[node_type.configure_mutations() for node_type in instantiated_types], graphene.ObjectType): pass
-        self.query = Query
-        self.mutation = Mutation
+        self.query = [node_type.configure_queries() for node_type in instantiated_types]
+        self.mutation = [node_type.configure_mutations() for node_type in instantiated_types]
 
     def schema(self) -> graphene.Schema:
         """
@@ -26,7 +24,9 @@ class SchemaConfigurator:
         Returns:
             graphene.Schema: the socnfigured schema.
         """
+        class Query(*self.query, graphene.ObjectType): pass
+        class Mutation(*self.mutation, graphene.ObjectType): pass
         return graphene.Schema(
-            query=self.query, 
-            mutation=self.mutation
+            query=Query, 
+            mutation=Mutation
             )

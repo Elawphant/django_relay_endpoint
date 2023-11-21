@@ -11,6 +11,7 @@ Table of Contents
   - [Requirements](#requirements)
   - [Installation](#installation)
   - [How to use](#how-to-use)
+  - [Adding custom query and mutation types](#adding-custom-query-and-mutation-types)
   - [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
   - [Validators](#validators)
   - [Permissions](#permissions)
@@ -19,6 +20,7 @@ Table of Contents
   - [Documentation](#documentation)
   - [Tip the author](#tip-the-author)
   - [Client](#client)
+  - [To-Do](#to-do)
 
 
 Requirements
@@ -114,6 +116,35 @@ urlpatterns = [
 It uses `FileUploadGraphQLView` from `graphene_file_upload.django` to support file uploads.
 
 
+Adding custom query and mutation types
+-----
+The `SchemaConfigurator` **instance** has `query` and `mutation` properties of type List, when instantiated.
+
+Custom object types can be appended to the `query` and `mutation` properties: e.g.
+
+```
+# let's imagine we have created a mutation that handles login
+from my_app.models import Book
+
+class AuthType(Mutation): ...
+
+# and we have BookType configured with NodeType 
+class BookType(NodeType):
+    class Meta:
+        model = Book
+        fields = '__all__'
+
+schema = SchemaConfigurator([
+    BookType,
+]) # will instantiate the SchemaConfigurator with rootfields form BookType.
+
+schema.mutations.append(AuthType) # adds AuthType to mutations.
+
+schema = schema.schema() # overwrite schema with actual schema. This will create the actual schema by extending all types and return the schema.
+
+```
+
+
 Configuring NodeType subclasses
 -----
 
@@ -188,7 +219,7 @@ Documentation
 -----
 The addon is pretty simple. The [How to use](#how-to-use) and [Configuring NodeType subclasses](#configuring-nodetype-subclasses)  explains it all. Each piece of code is also documented with dockstrings and has respective type hints.
 For additional information read the respective documentation: 
-- **graphene_django**: <https://docs.graphene-python.org/projects/django/en/latest/installation/>
+- **graphene_django**: <https://docs.graphene-python.org/projects/django/>
 - **graphene-file-upload**: <https://github.com/lmcgartland/graphene-file-upload>
 
 
@@ -204,3 +235,7 @@ Thank you!
 Client
 -----
 An ember client with ember-data style encapsulation layer is on the way. 
+
+To-Do
+-----
+- Default Login configurator
