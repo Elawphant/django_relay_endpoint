@@ -1,5 +1,5 @@
 Metadata-Version: 2.1
-Name: django-graphene-endpoint
+Name: django-relay-endpoint
 Version: 1.1
 Summary: Django addon to automatically configure graphql endpoints based on Django models.
 Home-page: https://github.com/Elawphant/django_relay_endpoint
@@ -70,7 +70,7 @@ Installation
 Install using pip:
 
 ```
-pip install django-graphene-endpoint
+pip install django-relay-endpoint
 ```
 
 How to use

@@ -44,7 +44,7 @@ Installation
 Install using pip:
 
 ```
-pip install django-graphene-endpoint
+pip install django-relay-endpoint
 ```
 
 How to use

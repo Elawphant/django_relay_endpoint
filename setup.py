@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 
 setup(
-    name="django_graphene_endpoint",
+    name="django_relay_endpoint",
     license="MIT",
     author="Gevorg Hakobyan",
     long_description=open("README.md", "r", encoding="utf-8").read(),
