@@ -34,7 +34,6 @@ class MetaKwargs(TypedDict):
     query_root_name_plural: str | None
     filter_fields: Union[Dict[str, List[str]], List[str]]
     filterset_class: Type[FilterSet]
-    query_operations: Literal["list", "detail"]
     object_type_name: str | None
     mutation_operations: Literal["create", "update", "delete"]
     extra_kwargs: Dict[str, Dict[str, Any]]
@@ -55,7 +54,6 @@ DEFAULT_META_KWARGS: MetaKwargs = {
     'query_root_name_plural':  None,
     'filter_fields': {},
     'filterset_class': None,
-    'query_operations': ["list", "detail"],
     'mutation_operations': ["create", "update", "delete"],
     'object_type_name': None,
     'extra_kwargs': {},
@@ -172,8 +170,6 @@ class NodeType:
             django_object_type=self.django_object_type,
             conventional_name=self.conventional_name,
             query_field_name=self.Meta.query_root_name,
-            query_field_name_plural=self.Meta.query_root_name_plural,
-            query_operations=self.Meta.query_operations
         )
 
     def configure_mutations(self) -> Type[graphene.ObjectType]:

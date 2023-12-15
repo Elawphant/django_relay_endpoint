@@ -12,6 +12,7 @@ Table of Contents
   - [Installation](#installation)
   - [How to use](#how-to-use)
   - [Adding custom query and mutation types](#adding-custom-query-and-mutation-types)
+  - [Configuring custom NodeType for node root field](#configuring-custom-nodetype-for-node-root-field)
   - [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
   - [Validators](#validators)
   - [Permissions](#permissions)
@@ -144,6 +145,37 @@ schema = schema.schema() # overwrite schema with actual schema. This will create
 
 ```
 
+Configuring custom NodeType for node root field
+-----
+Per relay specification the endpoint must implement `node` root field.
+The configured server implements the `node` root field with default configuration per graphene.
+
+If the developer wants to provide custom `NodeType` it can do so by subclassing `graphene.ObjectType` and providing own resolver, e.g.
+
+```
+class CustomNodeType(graphene.ObjectType):
+    node = graphene.relay.Node.Field()
+
+    @classmethod
+    resolve_node(cls, root, info, id):
+        # implement custom type identification using from_global_id
+        ...
+
+schema = SchemaConfigurator([
+    AuthorType,
+    BookType,
+])
+
+# overwrite the default NodeType with CustomNodeType
+schema.node_type = CustomNodeType
+
+# Overwrite schema with actual generated schema.
+schema = schema.schema()
+
+```
+
+
+
 
 Configuring NodeType subclasses
 -----
@@ -159,7 +191,6 @@ Available options are as follows:
 - **query_root_name_plural**: str | None - a root field name. Defaults to lowered snake-case model._meta.verbose_name_plural.
 - **filter_fields**: Union[Dict[str, List[str]], List[str]] - fielter_fields configurations. see <https://docs.graphene-python.org/projects/django/en/latest/filtering/#filterable-fields>.
 - **filterset_class**: FilterSet - a filterset_class. see <https://docs.graphene-python.org/projects/django/en/latest/filtering/#custom-filtersets>.
-- **query_operations**: Literal["list", "detail"] - whether the query root field should be configured for single and multiple results. Defaults to `["list", "detail"]` which means both will be configured.
 - **object_type_name**: str | None - The classname of the DjangoObjectType that will be configured. Defaults to camel-case `AppNameModelNameType`.
 - **mutation_operations**: Literal["create", "update", "delete"] - similar to query_operations, this limits the root field configuration, defaults to `["create", "update", "delete"]`.
 - **extra_kwargs**: Dict[str, Dict[str, Any]] - the mutation type fields are configured via assigned django form field; this option is similar to rest framework serializer `extra_kwargs`, which is a dictionary of field_names mapped to a dictionary of django form field kwargs. The configurator automatically maps the field to the respective form field: for field mapping see <https://docs.djangoproject.com/en/4.2/topics/forms/modelforms/#field-types>. For relations, it maps the fields to `graphene.List(graphene.ID, **field_kwargs)` `and graphene.ID(**field_kwargs)`, it will also infer the `required` parameter value from the declared `allow_blank` and `allow_null` parameters of the respective model.field.
@@ -227,7 +258,7 @@ Tip the author
 -----
 If this project has facilitated your job, saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping (donating) the author with some crypto:
 
-**Bitcoin**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
+**Opera browser wallet**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
 
 Thank you!
 
