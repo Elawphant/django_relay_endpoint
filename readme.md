@@ -269,4 +269,10 @@ An ember client with ember-data style encapsulation layer is on the way.
 
 To-Do
 -----
-- Default Login configurator
+- rename connection fields to plural version and 'Connection' appended, e.g. usersConnection both on root fields and relations. per relay style 
+- make server respond with only error by default, if any of the operations fails, make this reconfigurable.
+- make the ability to generate files from the configured schema instead of relying on dynamic initialization of the schema
+- make a field mutation configurator class, that will create a single field with resolver
+- introduce connection total_count field and 
+- add ability to add more connection related root fields
+- revert mutations back to form mutations, which will give more control over field validation and error population
