@@ -1,11 +1,9 @@
-from typing import Any, Literal, List
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from pathlib import Path
 from .boilerplate.utils import (
     create_directory,
     create_module,
     pascal_case,
-    snake_case,
     name_module
 )
 from .boilerplate.boilers import (
@@ -18,43 +16,103 @@ from .boilerplate.boilers import (
     select_fields
 )
 from django.apps import apps
+import json, jsonschema
+
+
+schema = {
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "model": {
+        "type": "string",
+        "description": "The model to generate the schema for"
+      },
+      "schema_app": {
+        "type": "string",
+        "description": "The app to place the generated files in"
+      },
+      "overwrite": {
+        "type": "boolean",
+        "description": "Overwrite existing files",
+      },
+      "query": {
+        "type": "boolean",
+        "description": "Generate the query module",
+      },
+      "query_fields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "The queryable fields to include",
+      },
+      "create_mutation": {
+        "type": "boolean",
+        "description": "Generate the create mutation module",
+      },
+      "create_mutation_fields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "The mutation fields to include",
+      },
+      "update_mutation": {
+        "type": "boolean",
+        "description": "Generate the update mutation module",
+      },
+      "update_mutation_fields": {
+        "type": "array",
+        "items": {
+          "type": "string"
+        },
+        "description": "The mutation fields to include",
+      },
+      "delete_mutation": {
+        "type": "boolean",
+        "description": "Generate the delete mutation module",
+      }
+    },
+    "required": ["model", "schema_app"]
+  }
+}
+
+defaults = {
+    "overwrite": False,
+    "query": True,
+    "create_mutation": True,
+    "update_mutation": True,
+    "delete_mutation": True,
+    "query_fields": ["__all__"],
+    "create_mutation_fields": ["__all__"],
+    "update_mutation_fields": ["__all__"],
+}
 
 
 
 class Command(BaseCommand):
     """
-    The `Command` class is a Django management command that generates a graphene schema for a given model. It creates various modules for nodes, queries, input types, mutations, and the schema itself.
+    The Command class is a subclass of BaseCommand and represents a Django management command. It generates a graphene schema for a given model.
 
-    Example Usage:
-        python manage.py dreboil myapp.MyModel --in-app=schema_app --query --create-mutation --update-mutation --delete-mutation
-
-    This command generates the graphene schema for the `MyModel` model in the `myapp` app. It places the generated files in the `schema_app` app. It generates the query module, create mutation module, update mutation module, and delete mutation module.
-
-    Main functionalities:
-    - Generates a node module that defines a GraphQL node for a given model.
-    - Generates a query module that defines a GraphQL query for a given model.
-    - Generates an input type module that defines a GraphQL input type for create, update, and delete mutations for a given model.
-    - Generates a mutation module that defines create, update, and delete mutations for a given model.
-    - Generates a schema module that defines the GraphQL schema.
-    - Generates an endpoint module that defines the GraphQL endpoint URL.
+    Attributes:
+        help (str): A string representing the help message for the command.
+        requires_migrations_checks (bool): A boolean indicating whether the command requires migrations checks.
 
     Methods:
-    - `add_arguments(parser: CommandParser) -> None`: Adds command line arguments to the command parser.
-    - `handle(*args: Any, **options: Any) -> str | None`: Executes the command logic. Generates the graphene schema based on the provided options.
+        add_arguments(parser: CommandParser) -> None:
+            Adds command line arguments to the command parser.
 
-    Fields:
-    - `help`: A help message for the command.
-    - `requires_migrations_checks`: Indicates whether the command requires migrations checks.
-    - `model`: The model to generate the schema for.
-    - `schema_app`: The app to place the generated files in.
-    - `overwrite`: Indicates whether to overwrite existing files.
-    - `query`: Indicates whether to generate the query module.
-    - `query_fields`: The queryable fields to include.
-    - `create_mutation`: Indicates whether to generate the create mutation module.
-    - `create_mutation_fields`: The mutation fields to include for create mutations.
-    - `update_mutation`: Indicates whether to generate the update mutation module.
-    - `update_mutation_fields`: The mutation fields to include for update mutations.
-    - `delete_mutation`: Indicates whether to generate the delete mutation module.
+        handle(*args: Any, **options: Any) -> str | None:
+            Executes the command logic.
+
+        validate_input(options):
+            Validates the input options for the command.
+
+        boil_endpoint(options):
+            Generates the necessary modules for the GraphQL endpoint.
+
     """
     help = "Generates graphene schema for given model"
 
@@ -74,14 +132,14 @@ class Command(BaseCommand):
         parser.add_argument("--overwrite", "-owt", 
             type=bool,
             required=False, 
-            default=False, 
+            default=defaults["overwrite"], 
             dest="overwrite", 
             help="Overwrite existing files"
             )
         parser.add_argument("--query", "-q", 
             type=bool,
             required=False, 
-            default=True, 
+            default=defaults["query"], 
             dest="query", 
             help="Generate the query module"
             )
@@ -89,7 +147,7 @@ class Command(BaseCommand):
             "--query-fields", "-qf", 
             type=list[str],
             required=False, 
-            default=["__all__"], 
+            default=defaults["query_fields"], 
             dest="query_fields",
             nargs='*',
             help="The queryable fields to include"
@@ -97,7 +155,7 @@ class Command(BaseCommand):
         parser.add_argument("--create-mutation", "-cm", 
             type=bool,
             required=False, 
-            default=True, 
+            default=defaults["create_mutation"], 
             dest="create_mutation", 
             help="Generate the create mutation module"
             )
@@ -105,7 +163,7 @@ class Command(BaseCommand):
             "--create-mutation-fields", "-cmf",
             type=list[str],
             required=False, 
-            default=['__all__'], 
+            default=defaults["create_mutation_fields"], 
             dest="create_mutation_fields",
             nargs='*',
             help="The mutation fields to include"
@@ -113,14 +171,14 @@ class Command(BaseCommand):
         parser.add_argument("--update-mutation", "-um", 
             type=bool,
             required=False, 
-            default=True, 
+            default=defaults["update_mutation"], 
             dest="update_mutation", 
             help="Generate the update mutation module"
             )
         parser.add_argument("--update-mutation-fields", "-umf",
             type=list[str],
             required=False, 
-            default=['__all__'], 
+            default=defaults["update_mutation_fields"], 
             dest="update_mutation_fields",
             nargs='*',
             help="The mutation fields to include"
@@ -128,14 +186,41 @@ class Command(BaseCommand):
         parser.add_argument("--delete-mutation", "-dm", 
             type=bool,
             required=False, 
-            default=True, 
+            default=defaults["delete_mutation"], 
             dest="delete_mutation", 
             help="Generate the delete mutation module"
             )
+        parser.add_argument("--read", "-r", 
+            type=str,
+            required=False, 
+            dest="file", 
+            help="Read from json file"
+            )
+        
 
-    def handle(self, *args: Any, **options: Any) -> str | None:
-        model = options["model"]
+    def handle(self, *args, **options) -> str | None:
+        if options['file']:
+            if options.__len__() > 2 and options["overwrite"] is False:
+                raise ValueError("Reading from file supports only file path and --overwrite arguments")
+            file = open(Path(options['file']))
+            try:
+                json_objects = json.loads(file)
+            except ValueError as e:
+                raise e
+            for opts in json_objects:
+                self.validate_input(opts)
+            for opts in json_objects:
+                # give granular control with overwriting
+                if options['overwrite'] and opts['overwrite'] is None:
+                    opts['overwrite'] = options['overwrite']
+                self.boil_endpoint(opts)
+            file.close()
+        else:   
+            self.validate_input(options)
+            self.boil_endpoint(options)
 
+
+    def validate_input(self, options):
         [app_label, modelname] = model.split(".")
         schema_app = options["schema_app"]
 
@@ -150,6 +235,12 @@ class Command(BaseCommand):
             model = apps.get_model(app_label, modelname)
         except LookupError as e:
             raise CommandError(e)
+
+    def boil_endpoint(self, options):
+        model = options["model"]
+
+        [app_label, modelname] = model.split(".")
+        schema_app = options["schema_app"]
         
         overwrite = options["overwrite"]
         query = options["query"]
@@ -162,22 +253,16 @@ class Command(BaseCommand):
 
         schema_app_dir = Path(schema_app)
 
-        create_directory(schema_app_dir / "nodes")
-        create_directory(schema_app_dir / "queries")
-        create_directory(schema_app_dir / "input_types")
-        create_directory(schema_app_dir / "mutations")
+        [create_directory(schema_app_dir / foldername) for foldername in ["nodes", "queries", "input_types", "mutations"]]
 
         pascal_name = pascal_case(modelname)
 
-        node_content = boil_node(
-            app_label, modelname, query_fields)
-        create_module(name_module(pascal_name, '', "node"),
-                      Path(schema_app_dir / "nodes"), node_content, overwrite)
+        node_content = boil_node(app_label, modelname, query_fields)
+        create_module(name_module(pascal_name, '', "node"), Path(schema_app_dir / "nodes"), node_content, overwrite)
 
         if query:
             query_content = boil_query(app_label, modelname, schema_app_dir)
-            create_module(name_module(pascal_name, '', "query"),
-                          Path(schema_app_dir / "queries"), query_content, overwrite)
+            create_module(name_module(pascal_name, '', "query"), Path(schema_app_dir / "queries"), query_content, overwrite)
 
         mutations = {
             "create": "Create" if create_mutation else False,
@@ -197,13 +282,9 @@ class Command(BaseCommand):
                     app_label, modelname, value, fields[key])
                 mutation_content = boil_mutation(
                     app_label, modelname, schema_app_dir, value)
-                create_module(name_module(pascal_name, key, "input_type"), Path(
-                    schema_app_dir / "input_types"), input_type_content, overwrite)
-                create_module(name_module(pascal_name, key, "mutation"), Path(
-                    schema_app_dir / "mutations"), mutation_content, overwrite)
+                create_module(name_module(pascal_name, key, "input_type"), Path(schema_app_dir / "input_types"), input_type_content, overwrite)
+                create_module(name_module(pascal_name, key, "mutation"), Path(schema_app_dir / "mutations"), mutation_content, overwrite)
 
-        create_module("urls", schema_app_dir,
-                      boil_endpoint(schema_app_dir), False)
+        create_module("urls", schema_app_dir, boil_endpoint(schema_app_dir), False)
         create_module("schema", schema_app_dir, boil_schema(), False)
         self.stdout.write(f"Created modules for {model} in {schema_app_dir}")
-
