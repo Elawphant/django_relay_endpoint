@@ -1,45 +1,39 @@
 import textwrap
 from django.apps import apps
-from utils import pascal_case, snake_case, name_class
+from .utils import pascal_case, snake_case, name_class, name_module
 from pathlib import Path
 from typing import Literal
 from django.db import models
-from django_relay_endpoint.configurators.field_conversions import MODEL_TO_SCALAR, field
-from graphene.types.generic import GenericScalar
-from django_relay_endpoint.configurators.fields import GenericDjangoInputField, configured
 
 FORM_SUFFIX = "ModelForm"
-INPUT_TYPE_SUFFIX = "Input"
+INPUT_TYPE_SUFFIX = "InputType"
 CREATE_PREFIX = "Create"
 UPDATE_PREFIX = "Create"
-INPUT_SUFFIX = "InputType"
+INPUT_SUFFIX = "Input"
 MUTATION_SUFFIX = "Mutation"
 QUERY_SUFFIX = "Query"
 NODE_SUFFIX = "Node"
 
 
 mutate_and_get_payload_create = """
-        model = abstract_mutation_type.model
         data = kwargs.get("data", None)
         client_mutation_id = kwargs.get("client_mutation_id", None)
         if data.get("id", None):
-            raise ValidationError(_(A client must not provide an id for new resources))
+            raise ValidationError(_("A client must not provide an id for new resources"))
 
         instance = cls.create_node(info)
         cls.validate(data, instance, info)
         cls.update_instance(instance, data)
         instance.save()
         mutation_kwargs = {{
-            {return_field_name}: instance,
-            success_keyword or "success": True,
+            '{return_field_name}': instance,
+            'success_keyword' or "success": True,
             'client_mutation_id': client_mutation_id
         }}
         return cls(**mutation_kwargs)
-
 """
 
 mutate_and_get_payload_update = """
-        model = abstract_mutation_type.model
         data = kwargs.get("data", None)
         client_mutation_id = kwargs.get("client_mutation_id", None)
         unresolved_id = data.get("id", None)
@@ -51,13 +45,12 @@ mutate_and_get_payload_update = """
         cls.validate(data, instance, info)
         cls.update_instance(instance, data)
         instance.save()
-        mutation_kwargs = {
-            {return_field_name}: instance,
+        mutation_kwargs = {{
+            '{return_field_name}': instance,
             'success': True,
             'client_mutation_id': client_mutation_id
-        }
+        }}
         return cls(**mutation_kwargs)
-
 """
 
 mutate_and_get_payload_delete = """
@@ -68,12 +61,11 @@ mutate_and_get_payload_delete = """
         
         instance = cls.get_node(info, id)
         instance.delete()
-        mutation_kwargs = {
+        mutation_kwargs = {{
             'success': True,
             'client_mutation_id': client_mutation_id
-        }
+        }}
         return cls(**mutation_kwargs)
-        
 """
 
 
@@ -106,9 +98,8 @@ def boil_node(app_label: str, modelname: str, fields: list[str]):
         from {app_label}.models import {modelname}
         from graphene import relay
         from graphene_django import DjangoObjectType
-        from graphene_django.filter import DjangoFilterConnectionField
 
-        class {pascal_case(name_class(modelname, suffix=NODE_SUFFIX))}(DjangoObjectType):
+        class {name_class(modelname, suffix=NODE_SUFFIX)}(DjangoObjectType):
             class Meta:
                 model = {modelname}
                 fields = {fields}
@@ -126,23 +117,23 @@ def boil_query(app_label: str, modelname: str, schema_app_dir: Path):
     connection_field_name = snake_case(apps.get_model(
         app_label, modelname)._meta.verbose_name_plural)
 
-    node_name = pascal_case(name_class(modelname, suffix=NODE_SUFFIX))
+    node_name = name_class(modelname, suffix=NODE_SUFFIX)
 
     content = textwrap.dedent(
         f"""
         from graphene import ObjectType
         from graphene_django.filter import DjangoFilterConnectionField
         from {app_label}.models import {modelname}
-        from {schema_app_dir.name}.nodes import {node_name}
+        from {schema_app_dir.name}.nodes.{name_module(modelname, '', NODE_SUFFIX)} import {node_name}
 
-        class {pascal_case(name_class(modelname, suffix=QUERY_SUFFIX))}(ObjectType):
+        class {name_class(modelname, suffix=QUERY_SUFFIX)}(ObjectType):
             {connection_field_name} = DjangoFilterConnectionField({node_name})
         """
     )
     return content
 
 
-def boil_input_type(app_label: str, modelname: str, purpose: Literal['Create', 'Update'], fields=["__all__"]):
+def boil_input_type(app_label: str, modelname: str, purpose: Literal['Create', 'Update', 'Delete'], fields=["__all__"]):
     """
         Returns a content of a input_type module
     """
@@ -158,34 +149,32 @@ def boil_input_type(app_label: str, modelname: str, purpose: Literal['Create', '
             # create "add_<fieldname>" and "remove_<fieldname>" fields for hasMany relations
             if field.is_relation:
                 if field.many_to_many or field.many_to_one:
-                    input_fields += f"    add_{field.name} = graphene.List(graphene.ID, **self.Meta.extra_kwargs[{
-                        field.name}] or **{{}})\n"
-                    input_fields += f"    remove_{
-                        field.name} = graphene.List(graphene.ID, **self.extra_kwargs[{field.name}] or **{{}})\n"
+                    input_fields += f"    add_{field.name} = graphene.List(graphene.ID, **Meta.extra_kwargs.get('{field.name}', {{}}))\n"
+                    input_fields += f"    remove_{field.name} = graphene.List(graphene.ID, **Meta.extra_kwargs.get('{field.name}', {{}}))\n"
                 else:
-                    input_fields += f"    {field.name} = graphene.ID(**self.extra_kwargs[{
-                        field.name}] or **{{}})\n"
+                    input_fields += f"    {field.name} = graphene.ID(**Meta.extra_kwargs.get('{field.name}', {{}}))\n"
             else:
                 if field.name == "id":
                     # omit id for Create operations, because id is generated on server side
                     if purpose != "Create":
-                        input_fields += f"    {
-                            field.name} = graphene.ID(required=True)"
+                        input_fields += f"    {field.name} = graphene.ID()\n"
                 else:
                     # extend GenericDjangoInputField which casts graphene fields to form-fields for inputted data cleanup and validation
-                    input_fields += f"    {
-                        field.name} = configured({field.__class__.__name__}, self.Meta.extra_kwargs)\n"
+                    input_fields += f"    {field.name} = configured(forms.{field.__class__.__name__}, **Meta.extra_kwargs.get('{field.name}', {{}}))\n"
 
-    content = textwrap.dedent(
-        f"""
-        import graphene
-        from django_relay_endpoint.configurators.fields import configured
-        from {app_label}.models import {modelname}
+    content = f"""
+import graphene
+{'''
+from django_relay_endpoint.configurators.fields import configured
+from django import forms 
+''' if purpose != "Delete" else ""}
 
-        class {pascal_case(name_class(modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX))}(graphene.InputObjectType):
-        {input_fields}
-        """
-    )
+class {name_class(modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX)}(graphene.InputObjectType):
+    class Meta:
+        extra_kwargs = {{}}
+
+{input_fields}
+"""
     return content
 
 
@@ -194,9 +183,9 @@ def boil_mutation(app_label: str, modelname: str, schema_app_dir: Path, purpose:
         Returns a content of a mutation module
     """
 
-    input_type_name = pascal_case(name_class(
-        modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX))
-    node_name = pascal_case(name_class(modelname, suffix=NODE_SUFFIX))
+    input_type_name = name_class(
+        modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX)
+    node_name = name_class(modelname, suffix=NODE_SUFFIX)
 
     mutator_methods = {
         "Create": mutate_and_get_payload_create,
@@ -204,33 +193,34 @@ def boil_mutation(app_label: str, modelname: str, schema_app_dir: Path, purpose:
         "Delete": mutate_and_get_payload_delete
     }
 
-    content = textwrap.dedent(
-        f"""
-        import graphene
-        from {app_label}.models import {modelname}
-        from {schema_app_dir.name}.nodes import {node_name}
-        from {schema_app_dir.name}.input_types import {input_type_name}
-        from graphql_relay.node.node import from_global_id
-        from django_relay_endpoint.configurators.object_types import DjangoClientIDMutation
+    content = f"""
+import graphene
+from {app_label}.models import {modelname}
+from {schema_app_dir.name}.nodes.{name_module(modelname, '', 'node')} import {node_name}
+from {schema_app_dir.name}.input_types.{name_module(modelname, purpose, INPUT_TYPE_SUFFIX)} import {input_type_name}
+{'''
+from graphql_relay.node.node import from_global_id
+''' if purpose != "Create" else ""}
+from django.core.exceptions import ValidationError
+from django.utils.translation import gettext_lazy as _
 
-        class {pascal_case(name_class(modelname, prefix=purpose, suffix=MUTATION_SUFFIX))}(DjangoClientIDMutation):
-            model = {modelname}
-            class Input:
-                data = graphene.Field({input_type_name})
+from django_relay_endpoint.configurators.object_types import DjangoClientIDMutation
 
-            {snake_case(modelname)} = graphene.Field({node_name})
+class {name_class(modelname, prefix=purpose, suffix=MUTATION_SUFFIX)}(DjangoClientIDMutation):
+    model = {modelname}
+    class Input:
+        data = graphene.Field({input_type_name})
 
-            @classmethod
-            def mutate_and_get_payload(cls, root, info, *args, **kwargs):
-            {mutator_methods[purpose].format(return_field_name=snake_case(modelname))}
+    {snake_case(modelname)} = graphene.Field({node_name})
 
+    @classmethod
+    def mutate_and_get_payload(cls, root, info, *args, **kwargs):
+    {mutator_methods[purpose].format(return_field_name=snake_case(modelname)) if purpose != "Delete" else mutator_methods[purpose]}
 
-            class Meta:
-                input_field_name = 'data'
-                return_field_name = '{modelname}'
-
-        """
-    )
+    class Meta:
+        input_field_name = 'data'
+        return_field_name = '{modelname}'
+"""
     return content
 
 
@@ -264,6 +254,7 @@ def boil_endpoint(schema_app_dir: Path):
     """
     return textwrap.dedent(f"""
     from django.urls import path
+    from django.views.decorators.csrf import csrf_exempt
     from graphene_django.views import GraphQLView
     from {schema_app_dir.name}.schema import schema
 
@@ -271,3 +262,18 @@ def boil_endpoint(schema_app_dir: Path):
         path("graphql", csrf_exempt(GraphQLView.as_view(graphiql=True, schema=schema))),
     ]
     """)
+
+
+def select_fields(model: models.Model, fields:list[str]):
+    condition_error = "'fields' must be string '__all__' or a list of fieldnames"
+    field_error = "No such field '{name}' for model {model__class__name__}"
+    if isinstance(fields, list) and len(fields) == 1 and fields[0] == '__all__':
+        return [field.name for field in model._meta.get_fields()]
+    elif isinstance(fields, list) and all(isinstance(field, str) for field in fields):
+        model_fields = [field.name for field in model._meta.get_fields()]
+        for name in fields:
+            if name not in model_fields:
+                raise ValueError(field_error.format(name=name, model__class__name__=model._meta.model_name))
+        return fields
+    else:
+        raise ValueError(condition_error)

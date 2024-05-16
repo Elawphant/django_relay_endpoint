@@ -1,27 +1,29 @@
-from typing import Any
+from typing import Any, Literal, List
 from django.core.management.base import BaseCommand, CommandError, CommandParser
 from pathlib import Path
-from .utils import (
+from .boilerplate.utils import (
     create_directory,
     create_module,
     pascal_case,
-    snake_case
+    snake_case,
+    name_module
 )
-from .boilers import (
+from .boilerplate.boilers import (
     boil_node,
     boil_query,
     boil_input_type,
     boil_mutation,
     boil_schema,
-    boil_endpoint
+    boil_endpoint,
+    select_fields
 )
 from django.apps import apps
 
 
 
-class DREBoil(BaseCommand):
+class Command(BaseCommand):
     """
-    The `DREBoilCommand` class is a Django management command that generates a graphene schema for a given model. It creates various modules for nodes, queries, input types, mutations, and the schema itself.
+    The `Command` class is a Django management command that generates a graphene schema for a given model. It creates various modules for nodes, queries, input types, mutations, and the schema itself.
 
     Example Usage:
         python manage.py dreboil myapp.MyModel --in-app=schema_app --query --create-mutation --update-mutation --delete-mutation
@@ -59,42 +61,83 @@ class DREBoil(BaseCommand):
     requires_migrations_checks = True
 
     def add_arguments(self, parser: CommandParser) -> None:
-        parser.add_argument("model", type=str,
-                            required=True, dest="model", help="The model to generate the schema for")
-        parser.add_argument("--in-app", '-in', type=bool,
-                            required=True, dest="schema_app", help="The app to place the generated files in")
-        parser.add_argument("--overwrite", "-owt", type=bool,
-                            required=False, default=False, dest="overwrite", help="Overwrite existing files")
-        parser.add_argument("--query", "-q", type=bool,
-                            required=False, default=True, dest="query", help="Generate the query module")
-        parser.add_argument("--query-fields", "-qf", type=list[str],
-                            required=False, default=["__all__"], dest="query_fields", help="The queryable fields to include")
-        parser.add_argument("--create-mutation", "-cm", type=bool,
-                            required=False, default=True, dest="create_mutation", help="Generate the create mutation module")
-        parser.add_argument("--create-mutation-fields", "-cmf",
-                            type=list[str], required=False, default=['__all__'], dest="create_mutation_fields", help="The mutation fields to include")
-        parser.add_argument("--update-mutation", "-um", type=bool,
-                            required=False, default=True, dest="update_mutation", help="Generate the update mutation module")
+        parser.add_argument("model", 
+            type=str, 
+            help="The model to generate the schema for"
+            )
+        parser.add_argument("--in-app", '-in', 
+            type=str,
+            required=True, 
+            dest="schema_app", 
+            help="The app to place the generated files in"
+            )
+        parser.add_argument("--overwrite", "-owt", 
+            type=bool,
+            required=False, 
+            default=False, 
+            dest="overwrite", 
+            help="Overwrite existing files"
+            )
+        parser.add_argument("--query", "-q", 
+            type=bool,
+            required=False, 
+            default=True, 
+            dest="query", 
+            help="Generate the query module"
+            )
+        parser.add_argument(
+            "--query-fields", "-qf", 
+            type=list[str],
+            required=False, 
+            default=["__all__"], 
+            dest="query_fields",
+            nargs='*',
+            help="The queryable fields to include"
+            )
+        parser.add_argument("--create-mutation", "-cm", 
+            type=bool,
+            required=False, 
+            default=True, 
+            dest="create_mutation", 
+            help="Generate the create mutation module"
+            )
+        parser.add_argument(
+            "--create-mutation-fields", "-cmf",
+            type=list[str],
+            required=False, 
+            default=['__all__'], 
+            dest="create_mutation_fields",
+            nargs='*',
+            help="The mutation fields to include"
+            )
+        parser.add_argument("--update-mutation", "-um", 
+            type=bool,
+            required=False, 
+            default=True, 
+            dest="update_mutation", 
+            help="Generate the update mutation module"
+            )
         parser.add_argument("--update-mutation-fields", "-umf",
-                            type=list[str], required=False, default=['__all__'], dest="update_mutation_fields", help="The mutation fields to include")
-        parser.add_argument("--delete-mutation", "-dm", type=bool,
-                            required=False, default=True, dest="delete_mutation", help="Generate the delete mutation module")
+            type=list[str],
+            required=False, 
+            default=['__all__'], 
+            dest="update_mutation_fields",
+            nargs='*',
+            help="The mutation fields to include"
+            )
+        parser.add_argument("--delete-mutation", "-dm", 
+            type=bool,
+            required=False, 
+            default=True, 
+            dest="delete_mutation", 
+            help="Generate the delete mutation module"
+            )
 
     def handle(self, *args: Any, **options: Any) -> str | None:
-        [
-            model,
-            schema_app,
-            overwrite,
-            query,
-            query_fields,
-            create_mutation,
-            create_mutation_fields,
-            update_mutation,
-            update_mutation_fields,
-            delete_mutation
-        ] = options
+        model = options["model"]
 
         [app_label, modelname] = model.split(".")
+        schema_app = options["schema_app"]
 
         try:
             apps.get_app_config(app_label)
@@ -104,9 +147,18 @@ class DREBoil(BaseCommand):
                 f"{e}. Are you sure your INSTALLED_APPS setting is correct?"
             )
         try:
-            apps.get_model(app_label, modelname)
+            model = apps.get_model(app_label, modelname)
         except LookupError as e:
             raise CommandError(e)
+        
+        overwrite = options["overwrite"]
+        query = options["query"]
+        query_fields = select_fields(model, options["query_fields"]) if query else []
+        create_mutation = options["create_mutation"]
+        create_mutation_fields = select_fields(model, options["create_mutation_fields"]) if create_mutation else []
+        update_mutation = options["update_mutation"]
+        update_mutation_fields = select_fields(model, options["update_mutation_fields"]) if update_mutation else []
+        delete_mutation = options["delete_mutation"]
 
         schema_app_dir = Path(schema_app)
 
@@ -116,16 +168,15 @@ class DREBoil(BaseCommand):
         create_directory(schema_app_dir / "mutations")
 
         pascal_name = pascal_case(modelname)
-        snake_name = snake_case(pascal_name)
 
         node_content = boil_node(
-            pascal_name, model, query_fields)
-        create_module(snake_name + "_node",
+            app_label, modelname, query_fields)
+        create_module(name_module(pascal_name, '', "node"),
                       Path(schema_app_dir / "nodes"), node_content, overwrite)
 
         if query:
-            query_content = boil_query(model, schema_app_dir)
-            create_module(snake_name + "_query",
+            query_content = boil_query(app_label, modelname, schema_app_dir)
+            create_module(name_module(pascal_name, '', "query"),
                           Path(schema_app_dir / "queries"), query_content, overwrite)
 
         mutations = {
@@ -137,7 +188,7 @@ class DREBoil(BaseCommand):
         fields = {
             "create": create_mutation_fields,
             "update": update_mutation_fields,
-            "delete": [],
+            "delete": ['id'],
         }
 
         for key, value in mutations.items():
@@ -146,11 +197,13 @@ class DREBoil(BaseCommand):
                     app_label, modelname, value, fields[key])
                 mutation_content = boil_mutation(
                     app_label, modelname, schema_app_dir, value)
-                create_module(snake_name + f"_{key}_input_type", Path(
+                create_module(name_module(pascal_name, key, "input_type"), Path(
                     schema_app_dir / "input_types"), input_type_content, overwrite)
-                create_module(snake_name + f"_{key}_mutation", Path(
+                create_module(name_module(pascal_name, key, "mutation"), Path(
                     schema_app_dir / "mutations"), mutation_content, overwrite)
 
         create_module("urls", schema_app_dir,
                       boil_endpoint(schema_app_dir), False)
         create_module("schema", schema_app_dir, boil_schema(), False)
+        self.stdout.write(f"Created modules for {model} in {schema_app_dir}")
+

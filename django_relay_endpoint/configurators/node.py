@@ -169,7 +169,7 @@ class NodeType:
         return configure_queries(
             django_object_type=self.django_object_type,
             conventional_name=self.conventional_name,
-            query_field_name_plural=self.Meta.query_root_name_plural,
+            query_field_name=self.Meta.query_root_name_plural,
         )
 
     def configure_mutations(self) -> Type[graphene.ObjectType]:
