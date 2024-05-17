@@ -281,7 +281,6 @@ def select_fields(model: models.Model, fields:list[str]):
 
 
 def validate_model(options):
-    model = options["model"]
     [app_label, modelname] = model.split(".")
     schema_app = options["schema_app"]
 
@@ -298,12 +297,12 @@ def validate_model(options):
         raise CommandError(e)
 
 
-def generate(options):
+def boil_endpoint(options):
     model = options["model"]
+
     [app_label, modelname] = model.split(".")
     schema_app = options["schema_app"]
-    model = apps.get_model(app_label, modelname)
-
+    
     overwrite = options["overwrite"]
     query = options["query"]
     query_fields = select_fields(model, options["query_fields"]) if query else []

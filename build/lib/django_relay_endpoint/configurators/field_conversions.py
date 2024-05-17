@@ -90,8 +90,7 @@ def configure_input_field(
     A utility function that maps the model field to the form field.
 
     Args:
-        field (models.Field): a django model field
-        custom_form_field_class (Type[forms.Field], optional): a custom form field class to supply custom field. Defaults to None.
+        field (Type[forms.Field], optional): the form field class. 
         field_extra_kwargs (Dict[str, dict]): extra kwargs for the field. Used for BooleanField conversion to BooleanField or NullBooleanField
     """
     
@@ -100,3 +99,6 @@ def configure_input_field(
     else:
         field_class = MODEL_TO_FORM_FIELD.get(field, None) or MODEL_TO_FORM_FIELD[models.CharField] # fail silently to Charfield
     return field_class
+
+
+field:configure_input_field  = configure_input_field

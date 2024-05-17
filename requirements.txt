@@ -2,4 +2,3 @@ graphene-django
 graphene-file-upload
 django_filter
 jsonschema
-pydantic

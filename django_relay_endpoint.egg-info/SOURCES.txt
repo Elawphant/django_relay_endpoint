@@ -11,7 +11,6 @@ django_relay_endpoint.egg-info/SOURCES.txt
 django_relay_endpoint.egg-info/dependency_links.txt
 django_relay_endpoint.egg-info/requires.txt
 django_relay_endpoint.egg-info/top_level.txt
-django_relay_endpoint/configurators/--scalars.py
 django_relay_endpoint/configurators/__init__.py
 django_relay_endpoint/configurators/field_conversions.py
 django_relay_endpoint/configurators/fields.py
@@ -27,3 +26,11 @@ django_relay_endpoint/configurators/mutation_configurators/create_mutation_confi
 django_relay_endpoint/configurators/mutation_configurators/delete_mutation_configurator.py
 django_relay_endpoint/configurators/mutation_configurators/input_object_type_configurator.py
 django_relay_endpoint/configurators/mutation_configurators/update_mutation_configurator.py
+django_relay_endpoint/management/__init__.py
+django_relay_endpoint/management/commands/__init__.py
+django_relay_endpoint/management/commands/dre-from-models.py
+django_relay_endpoint/management/commands/dre-from-schema.py
+django_relay_endpoint/management/commands/boilerplate/__init__.py
+django_relay_endpoint/management/commands/boilerplate/boilers.py
+django_relay_endpoint/management/commands/boilerplate/types.pyi
+django_relay_endpoint/management/commands/boilerplate/utils.py

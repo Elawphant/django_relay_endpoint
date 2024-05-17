@@ -1,0 +1,3 @@
+django
+jsonschema
+../../django_relay_endpoint

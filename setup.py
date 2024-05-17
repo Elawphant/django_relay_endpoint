@@ -2,10 +2,10 @@ from setuptools import setup, find_packages
 
 setup(
     name="django_relay_endpoint",
-    version='1.2.0',
+    version='2.0.0',
     license="MIT",
     author="Gevorg Hakobyan",
-    long_description=open("README.md", "r", encoding="utf-8").read(),
+    long_description=open("readme.md", "r", encoding="utf-8").read(),
     long_description_content_type='text/markdown',
 
     install_requires=[
