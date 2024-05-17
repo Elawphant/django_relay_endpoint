@@ -20,63 +20,74 @@ import json, jsonschema
 
 
 schema = {
-  "$schema": "http://json-schema.org/draft-07/schema#",
-  "type": "array",
-  "items": {
-    "type": "object",
-    "properties": {
-      "model": {
-        "type": "string",
-        "description": "The model to generate the schema for"
-      },
-      "schema_app": {
-        "type": "string",
-        "description": "The app to place the generated files in"
-      },
-      "overwrite": {
-        "type": "boolean",
-        "description": "Overwrite existing files",
-      },
-      "query": {
-        "type": "boolean",
-        "description": "Generate the query module",
-      },
-      "query_fields": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "description": "The queryable fields to include",
-      },
-      "create_mutation": {
-        "type": "boolean",
-        "description": "Generate the create mutation module",
-      },
-      "create_mutation_fields": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "description": "The mutation fields to include",
-      },
-      "update_mutation": {
-        "type": "boolean",
-        "description": "Generate the update mutation module",
-      },
-      "update_mutation_fields": {
-        "type": "array",
-        "items": {
-          "type": "string"
-        },
-        "description": "The mutation fields to include",
-      },
-      "delete_mutation": {
-        "type": "boolean",
-        "description": "Generate the delete mutation module",
-      }
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "schema_app": {
+      "type": "string",
+      "description": "The app to place the generated files in"
     },
-    "required": ["model", "schema_app"]
-  }
+    "overwrite": {
+      "type": "boolean",
+      "description": "Overwrite existing files"
+    },
+    "type_config": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "model": {
+            "type": "string",
+            "description": "The model to generate the schema for"
+          },
+          "overwrite": {
+            "type": "boolean",
+            "description": "Overwrite existing files"
+          },
+          "query": {
+            "type": "boolean",
+            "description": "Generate the query module"
+          },
+          "query_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The queryable fields to include"
+          },
+          "create_mutation": {
+            "type": "boolean",
+            "description": "Generate the create mutation module"
+          },
+          "create_mutation_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The mutation fields to include"
+          },
+          "update_mutation": {
+            "type": "boolean",
+            "description": "Generate the update mutation module"
+          },
+          "update_mutation_fields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "The mutation fields to include"
+          },
+          "delete_mutation": {
+            "type": "boolean",
+            "description": "Generate the delete mutation module"
+          }
+        },
+        "required": ["model"]
+      },
+      "description": "Configuration for each type"
+    }
+  },
+  "required": ["schema_app", "type_config"]
 }
 
 defaults = {
@@ -200,19 +211,20 @@ class Command(BaseCommand):
 
     def handle(self, *args, **options) -> str | None:
         if options['file']:
-            if options.__len__() > 2 and options["overwrite"] is False:
-                raise ValueError("Reading from file supports only file path and --overwrite arguments")
             file = open(Path(options['file']))
             try:
-                json_objects = json.loads(file)
+                json_schema = json.loads(file)
+                jsonschema.validate(json_schema, schema)
             except ValueError as e:
                 raise e
-            for opts in json_objects:
+            for opts in json_schema['type_config']:
+                opts['schema_app'] = json_schema['schema_app']
+            for opts in json_schema['type_config']:
                 self.validate_input(opts)
-            for opts in json_objects:
+            for opts in json_schema['type_config']:
                 # give granular control with overwriting
-                if options['overwrite'] and opts['overwrite'] is None:
-                    opts['overwrite'] = options['overwrite']
+                if json_schema['overwrite'] is not None and opts['overwrite'] is None:
+                    opts['overwrite'] = json_schema['overwrite']
                 self.boil_endpoint(opts)
             file.close()
         else:   
