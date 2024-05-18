@@ -29,7 +29,6 @@ def snake_case(text):
 
 
 def name_class(typename: str, prefix: str = "", suffix:str = ""):
-    print(pascal_case(suffix), "--------")
     return f"{pascal_case(prefix)}{pascal_case(typename)}{pascal_case(suffix)}"
 
 
@@ -118,3 +117,6 @@ defaults = {
     "create_mutation_fields": ["__all__"],
     "update_mutation_fields": ["__all__"],
 }
+
+
+SUCCESS_MESSAGE = "The endpoint modules have been successfully configured in '{schema_app}'"

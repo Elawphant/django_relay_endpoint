@@ -1,6 +1,6 @@
 import textwrap
 from django.apps import apps
-from .utils import pascal_case, snake_case, name_class, name_module, create_directory, create_module
+from .utils import pascal_case, snake_case, name_class, name_module, create_directory, create_module, defaults
 from pathlib import Path
 from typing import Literal
 from django.db import models
@@ -10,7 +10,6 @@ FORM_SUFFIX = "ModelForm"
 INPUT_TYPE_SUFFIX = "InputType"
 CREATE_PREFIX = "Create"
 UPDATE_PREFIX = "Create"
-INPUT_SUFFIX = "Input"
 MUTATION_SUFFIX = "Mutation"
 QUERY_SUFFIX = "Query"
 NODE_SUFFIX = "Node"
@@ -73,6 +72,7 @@ mutate_and_get_payload_delete = """
 def boil_form(app_label: str, modelname: str, fields: list[str], purpose: Literal['Create', 'Update']):
     """
         Returns a content of a form module
+        TODO: Maybe implement FormMutation support
     """
 
     content = textwrap.dedent(
@@ -98,7 +98,7 @@ def boil_node(app_label: str, modelname: str, fields: list[str]):
         f"""
         from {app_label}.models import {modelname}
         from graphene import relay
-        from graphene_django import DjangoObjectType
+        from django_relay_endpoint import DjangoObjectType
 
         class {name_class(modelname, suffix=NODE_SUFFIX)}(DjangoObjectType):
             class Meta:
@@ -162,7 +162,6 @@ def boil_input_type(app_label: str, modelname: str, purpose: Literal['Create', '
                 else:
                     # extend GenericDjangoInputField which casts graphene fields to form-fields for inputted data cleanup and validation
                     input_fields += f"    {field.name} = configured(forms.{field.__class__.__name__}, **Meta.extra_kwargs.get('{field.name}', {{}}))\n"
-    print(modelname, purpose, INPUT_TYPE_SUFFIX, name_class(modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX))
     content = f"""
 import graphene
 {'''
@@ -205,7 +204,7 @@ from graphql_relay.node.node import from_global_id
 from django.core.exceptions import ValidationError
 from django.utils.translation import gettext_lazy as _
 
-from django_relay_endpoint.configurators.object_types import DjangoClientIDMutation
+from django_relay_endpoint import DjangoClientIDMutation
 
 class {name_class(modelname, prefix=purpose, suffix=MUTATION_SUFFIX)}(DjangoClientIDMutation):
     model = {modelname}
@@ -220,7 +219,7 @@ class {name_class(modelname, prefix=purpose, suffix=MUTATION_SUFFIX)}(DjangoClie
 
     class Meta:
         input_field_name = 'data'
-        return_field_name = '{modelname}'
+        return_field_name = '{snake_case(modelname)}'
 """
     return content
 
@@ -298,20 +297,20 @@ def validate_model(options):
         raise CommandError(e)
 
 
-def generate(options):
-    model = options["model"]
+def generate(options: dict):
+    model = options.get("model")
     [app_label, modelname] = model.split(".")
     schema_app = options["schema_app"]
     model = apps.get_model(app_label, modelname)
 
     overwrite = options["overwrite"]
-    query = options["query"]
-    query_fields = select_fields(model, options["query_fields"]) if query else []
-    create_mutation = options["create_mutation"]
-    create_mutation_fields = select_fields(model, options["create_mutation_fields"]) if create_mutation else []
-    update_mutation = options["update_mutation"]
-    update_mutation_fields = select_fields(model, options["update_mutation_fields"]) if update_mutation else []
-    delete_mutation = options["delete_mutation"]
+    query = options.get("query", defaults.get("query"))
+    query_fields = select_fields(model, options.get("query_fields", defaults.get("query_fields"))) if query else []
+    create_mutation = options.get("create_mutation", defaults.get("create_mutation"))
+    create_mutation_fields = select_fields(model, options.get("create_mutation_fields", defaults.get("create_mutation_fields"))) if create_mutation else []
+    update_mutation = options.get("update_mutation", defaults.get("update_mutation"))
+    update_mutation_fields = select_fields(model, options.get("update_mutation_fields", defaults.get("update_mutation_fields"))) if update_mutation else []
+    delete_mutation = options.get("delete_mutation", defaults.get("delete_mutation"))
 
     schema_app_dir = Path(schema_app)
 
@@ -338,6 +337,9 @@ def generate(options):
         "delete": ['id'],
     }
 
+    overwrite_urls = True if Path(schema_app_dir / 'urls.py').is_file() else False
+    overwrite_schema = True if Path(schema_app_dir / 'schema.py').is_file() else False
+
     for key, value in mutations.items():
         if value:
             input_type_content = boil_input_type(
@@ -347,5 +349,5 @@ def generate(options):
             create_module(name_module(pascal_name, key, "input_type"), Path(schema_app_dir / "input_types"), input_type_content, overwrite)
             create_module(name_module(pascal_name, key, "mutation"), Path(schema_app_dir / "mutations"), mutation_content, overwrite)
 
-    create_module("urls", schema_app_dir, boil_endpoint(schema_app_dir), False)
-    create_module("schema", schema_app_dir, boil_schema(), False)
+    create_module("urls", schema_app_dir, boil_endpoint(schema_app_dir), overwrite_urls)
+    create_module("schema", schema_app_dir, boil_schema(), overwrite_schema)
