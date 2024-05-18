@@ -162,7 +162,7 @@ def boil_input_type(app_label: str, modelname: str, purpose: Literal['Create', '
                 else:
                     # extend GenericDjangoInputField which casts graphene fields to form-fields for inputted data cleanup and validation
                     input_fields += f"    {field.name} = configured(forms.{field.__class__.__name__}, **Meta.extra_kwargs.get('{field.name}', {{}}))\n"
-
+    print(modelname, purpose, INPUT_TYPE_SUFFIX, name_class(modelname, prefix=purpose, suffix=INPUT_TYPE_SUFFIX))
     content = f"""
 import graphene
 {'''
