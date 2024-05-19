@@ -13,6 +13,7 @@ UPDATE_PREFIX = "Create"
 MUTATION_SUFFIX = "Mutation"
 QUERY_SUFFIX = "Query"
 NODE_SUFFIX = "Node"
+CONNECTION_SUFFIX = "Connection"
 
 
 mutate_and_get_payload_create = """
@@ -68,27 +69,6 @@ mutate_and_get_payload_delete = """
         return cls(**mutation_kwargs)
 """
 
-
-def boil_form(app_label: str, modelname: str, fields: list[str], purpose: Literal['Create', 'Update']):
-    """
-        Returns a content of a form module
-        TODO: Maybe implement FormMutation support
-    """
-
-    content = textwrap.dedent(
-        f"""
-        from django import forms
-        from {app_label}.models import {modelname}
-
-        class {pascal_case(modelname, purpose, FORM_SUFFIX)}(forms.ModelForm):
-            class Meta:
-                model = {modelname}
-                fields = {fields}
-        """
-    )
-    return content
-
-
 def boil_node(app_label: str, modelname: str, fields: list[str]):
     """
         Returns a content of a node module
@@ -111,21 +91,42 @@ def boil_node(app_label: str, modelname: str, fields: list[str]):
     return content
 
 
+def boil_connection(app_label: str, modelname: str, schema_app_dir: Path):
+    """
+        Returns a content of a query module
+    """
+    node_name = name_class(modelname, suffix=NODE_SUFFIX)
+
+    return f"""
+from graphql_relay.connection.connection import Connection
+from {schema_app_dir.name}.nodes.{name_module(modelname, '', NODE_SUFFIX)} import {node_name}
+
+class {name_class(modelname, suffix=CONNECTION_SUFFIX)}(Connection):    
+    class Meta:
+        node = {node_name}
+
+    class Edge: 
+        ...
+
+    """
+
+
 def boil_query(app_label: str, modelname: str, schema_app_dir: Path):
     """
         Returns a content of a query module
     """
     connection_field_name = snake_case(apps.get_model(
-        app_label, modelname)._meta.verbose_name_plural)
+        app_label, modelname)._meta.verbose_name_plural + f"_{CONNECTION_SUFFIX}")
 
     node_name = name_class(modelname, suffix=NODE_SUFFIX)
+    connection_name = name_class(modelname, suffix=CONNECTION_SUFFIX)
 
     content = textwrap.dedent(
         f"""
-        from graphene import ObjectType
+        from graphene import ObjectType, relay
         from graphene_django.filter import DjangoFilterConnectionField
-        from {app_label}.models import {modelname}
         from {schema_app_dir.name}.nodes.{name_module(modelname, '', NODE_SUFFIX)} import {node_name}
+        from {schema_app_dir.name}.connections.{name_module(modelname, '', CONNECTION_SUFFIX)} import {connection_name}
 
         class {name_class(modelname, suffix=QUERY_SUFFIX)}(ObjectType):
             {connection_field_name} = DjangoFilterConnectionField({node_name})
@@ -229,24 +230,31 @@ def boil_schema():
         Returns a content of a schema module
     """
 
-    return textwrap.dedent("""
-    import graphene
+    return """
+import graphene
+# import your types
 
-    # Add your queries here
-    class Query(graphene.ObjectType):
-        pass
+class Query(
+    # add your query types
+    graphene.ObjectType
+    ):
+    node = graphene.relay.Node.Field()
     
-    # Add your mutations here
-    class Mutation(graphene.ObjectType):
-        pass
-    
-    # Add your subscriptions here
-    class Subscription(graphene.ObjectType):
-        pass
-    
-    schema = graphene.Schema(query=Query, mutation=Mutation, subscription=Subscription)
 
-    """)
+class Mutation(
+    # add your mutation types
+    graphene.ObjectType
+    ):
+    pass
+
+class Subscription(
+    # add your subscription types
+    graphene.ObjectType
+    ):
+    pass
+
+schema = graphene.Schema(query=Query, mutation=Mutation, subscription=Subscription)
+    """
 
 def boil_endpoint(schema_app_dir: Path):
     """
@@ -255,11 +263,12 @@ def boil_endpoint(schema_app_dir: Path):
     return textwrap.dedent(f"""
     from django.urls import path
     from django.views.decorators.csrf import csrf_exempt
+    from django_relay_endpoint import FileUploadGraphQLView
     from graphene_django.views import GraphQLView
     from {schema_app_dir.name}.schema import schema
 
     urlpatterns = [
-        path("graphql", csrf_exempt(GraphQLView.as_view(graphiql=True, schema=schema))),
+        path('api/', csrf_exempt(FileUploadGraphQLView.as_view(graphiql=True, schema=schema)))
     ]
     """)
 
@@ -314,12 +323,14 @@ def generate(options: dict):
 
     schema_app_dir = Path(schema_app)
 
-    [create_directory(schema_app_dir / foldername) for foldername in ["nodes", "queries", "input_types", "mutations"]]
+    [create_directory(schema_app_dir / foldername) for foldername in ["nodes", "connections", "queries", "input_types", "mutations"]]
 
     pascal_name = pascal_case(modelname)
 
     node_content = boil_node(app_label, modelname, query_fields)
+    connection_content = boil_connection(app_label, modelname, schema_app_dir)
     create_module(name_module(pascal_name, '', "node"), Path(schema_app_dir / "nodes"), node_content, overwrite)
+    create_module(name_module(pascal_name, '', "connection"), Path(schema_app_dir / "connections"), connection_content, overwrite)
 
     if query:
         query_content = boil_query(app_label, modelname, schema_app_dir)
@@ -337,9 +348,6 @@ def generate(options: dict):
         "delete": ['id'],
     }
 
-    overwrite_urls = True if Path(schema_app_dir / 'urls.py').is_file() else False
-    overwrite_schema = True if Path(schema_app_dir / 'schema.py').is_file() else False
-
     for key, value in mutations.items():
         if value:
             input_type_content = boil_input_type(
@@ -349,5 +357,5 @@ def generate(options: dict):
             create_module(name_module(pascal_name, key, "input_type"), Path(schema_app_dir / "input_types"), input_type_content, overwrite)
             create_module(name_module(pascal_name, key, "mutation"), Path(schema_app_dir / "mutations"), mutation_content, overwrite)
 
-    create_module("urls", schema_app_dir, boil_endpoint(schema_app_dir), overwrite_urls)
-    create_module("schema", schema_app_dir, boil_schema(), overwrite_schema)
+    create_module("urls", schema_app_dir, boil_endpoint(schema_app_dir), False)
+    create_module("schema", schema_app_dir, boil_schema(), False)

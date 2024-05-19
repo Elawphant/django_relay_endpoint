@@ -15,13 +15,10 @@ def create_module(filename: str, folder_path: Path, content: str, overwrite=Fals
 
 
 def pascal_case(text: str):
-    text = re.sub(r"(_|-)+", " ", str(text))
-    # Split text into words
-    words = re.findall(r"[a-zA-Z0-9]+", str(text))
-    # Capitalize each word
-    words = [word.capitalize() for word in words]
+    text = re.sub(r"(_|-)+", " ", snake_case(str(text)))
+    words = str(text).split(" ")
     # Concatenate words
-    return str("".join(words))
+    return "".join([word.title() for word in words])
 
 def snake_case(text):
     # Handle camelCase, kebab-case, and PascalCase
@@ -120,3 +117,6 @@ defaults = {
     "create_mutation_fields": ["__all__"],
     "update_mutation_fields": ["__all__"],
 }
+
+
+SUCCESS_MESSAGE = "The endpoint modules have been successfully configured in '{schema_app}'"

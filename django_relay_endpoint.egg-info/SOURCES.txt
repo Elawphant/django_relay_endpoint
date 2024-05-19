@@ -28,9 +28,8 @@ django_relay_endpoint/configurators/mutation_configurators/input_object_type_con
 django_relay_endpoint/configurators/mutation_configurators/update_mutation_configurator.py
 django_relay_endpoint/management/__init__.py
 django_relay_endpoint/management/commands/__init__.py
-django_relay_endpoint/management/commands/dre-from-models.py
-django_relay_endpoint/management/commands/dre-from-schema.py
+django_relay_endpoint/management/commands/dre-from-json.py
+django_relay_endpoint/management/commands/dre-from-model.py
 django_relay_endpoint/management/commands/boilerplate/__init__.py
 django_relay_endpoint/management/commands/boilerplate/boilers.py
-django_relay_endpoint/management/commands/boilerplate/types.pyi
 django_relay_endpoint/management/commands/boilerplate/utils.py

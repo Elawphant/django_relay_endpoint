@@ -27,40 +27,44 @@ Requires-Dist: graphene-django>=3.1.5
 Requires-Dist: graphene-file-upload>=1.3.0
 Requires-Dist: django_filter>=23.3.0
 
-Django Relay Endpoint
-=====
+# Django Relay Endpoint
+
 "Django Relay Endpoint" is a Django addon that automatically configures a customizable graphql endpoint from models.
 The addon is made for "graphene_django".
 
+This addon contains modules for dynamic autogeneration of an endpoint.
+However, given the limitations of customization, instead, `dre-from-model` and `dre-from-json` commands were supplied in version 2. These commands use the `django_relay_endpoint`'s `DjangoClientIDMutation`, validators and persissions for ease of customization. They can be imported directly from `django_relay_endpoint` package.
 
-Table of Contents
------
+## Table of Contents
 
 - [Django Relay Endpoint](#django-relay-endpoint)
   - [Table of Contents](#table-of-contents)
   - [Requirements](#requirements)
   - [Installation](#installation)
   - [How to use](#how-to-use)
-  - [Adding custom query and mutation types](#adding-custom-query-and-mutation-types)
-  - [Configuring custom NodeType for node root field](#configuring-custom-nodetype-for-node-root-field)
-  - [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
+  - [Commands](#commands)
+    - [Usage dre-from-model](#usage-dre-from-model)
+    - [Usage dre-from-json](#usage-dre-from-json)
+  - [Dynamic endpoint](#dynamic-endpoint)
+    - [Simple usage](#simple-usage)
+    - [Adding custom query and mutation types](#adding-custom-query-and-mutation-types)
+    - [Configuring custom NodeType for node root field](#configuring-custom-nodetype-for-node-root-field)
+    - [Configuring NodeType subclasses](#configuring-nodetype-subclasses)
   - [Validators](#validators)
   - [Permissions](#permissions)
   - [Useful subclasses and tools](#useful-subclasses-and-tools)
   - [License](#license)
   - [Documentation](#documentation)
   - [Tip the author](#tip-the-author)
-  - [Client](#client)
 
-Requirements
------
+## Requirements
 
 Python 3.8 or higher
 Django 4.2.7 or higher
 
 It is possible that the addon will work with lower code setup. Keep in mind that the code uses `__init_subclass__` method and format string. It was tested made with the following code setup
 
-- Python 3.11.2
+- Python 3.11.2 (probably will work on older versions, the addon was tested on 3.11 and 3.12)
 - Django >= 4.2.7
 - graphene-django >= 3.3.0
 - graphene-file-upload >= 1.3.0
@@ -68,8 +72,7 @@ It is possible that the addon will work with lower code setup. Keep in mind that
 
 This package will also install `graphene-django`, `graphene-file-upload` and `django_filter`.
 
-Installation
------
+## Installation
 
 Install using pip:
 
@@ -77,8 +80,14 @@ Install using pip:
 pip install django-relay-endpoint
 ```
 
-How to use
------
+Install using uv
+
+```zsh
+
+uv pip install django-relay-endpoint
+```
+
+## How to use
 
 1. Add `'graphene_django'` to your project's `settings.py`:
 
@@ -87,10 +96,81 @@ INSTALLED_APPS = [
     # ... other apps and addons
     'graphene_django',
 ]
-
 ```
 
-2. Declare your NodeTypes and pass it to the SchemaConfigurator to get the schema. e.g.
+Done, now you can use the commands to generate the necessary modules.
+
+## Commands
+
+The addon comes with two commands
+
+- dre-from-model
+- dre-from-json
+
+The `dre-from-model` one generates modules from a single model, while `dre-from-json` generates a type schema from a json file. `dre` stands for `django-relay-endpoint`.
+
+The commands will generate `nodes`, `input_types`, `queries` and `mutations` folders inside the provided app, generate necessary modules inside them with conventional naming, as well as create a `urls` and `schema` modules. 
+
+**Imporatant!** After the generation of the schema, you must import and extend the respective query, mutation and subscription classes inside the `schema` module as well as inlcude the `urls` module in your project's `urls` module.
+
+### Usage dre-from-model
+
+Example usage
+
+```zsh
+python manage.py dre-from-model app_label.ModelName --in--app api
+```
+
+Available arguments/options:
+
+- "model": dot-separated app_label and model class name, e.g. 'app.Model'
+- "--in-app", "-in": the django app where to generate the schema models in
+- "--overwrite", "-owt": whether to overwrite the modeles o not, defaults to False
+- "--query", "-q": whether to generate query modules or not, defaults to True
+- "--query-fields", "-qf": a list of of fields to configure, if none provided, all model fields will be configured
+- "--create-mutation", "-cm": whether to generate mutation modules for creation, defaults to `True`
+- "--create-mutation-fields", "-cmf": the list of fields to configure, if none provided, all model fields will be configured
+- "--update-mutation", "-um": whether to generate mutation modules for updating, defaults to `True`
+- "--update-mutation-fields", "-umf": the list of fields to configure, if none provided, all model fields will be configured
+- "--delete-mutation", "-dm": whether to generate mutation modules for deletion, defaults to `True`
+
+### Usage dre-from-json
+
+Example usage
+
+```zsh
+python manage.py dre-from-schema --read app_label/type_config.json
+```
+
+Available arguments/options:
+
+- "--read", "-r: path to the json file.
+
+The json file must have the following structure.
+
+- `schema_app` (str): required, the `app_label`, where the schema modules will be generated
+- `type_config` (list[dict]): required, each dictionary is for each model, and accepts the following kwargs:
+- `overwrite` (bool): optional, whether to overwrite existing files or not
+
+  - `model` (string): required, must be declared in form of `app_label.ModelName`.
+  - `overwrite` (bool): (optional) same as top level `overwrite`, except if it is present, the top level overwrite will not apply.
+  - `query` (bool): (optional) whether to generate query modules or not, defaults to `True`
+  - `query_fields` (list[str]): a list of of fields to configure, if none provided, all model fields will be configured
+  - `create_mutation` (bool): whether to generate mutation modules for creation, defaults to `True`
+  - `create_mutation_fields` (list[str]): a list of of fields to configure, if none provided, all model fields will be configured
+  - `update_mutation` whether to generate mutation modules for updating, defaults to `True`
+  - `update_mutation_fields` (list[str]): a list of of fields to configure, if none provided, all model fields will be configured
+  - `delete_mutation` (bool): whether to generate mutation modules for deletion, defaults to `True`
+
+**Overwrite** will not overwrite existing `urls` and `schema` modules.
+
+**Django relay endpoint comes with autoconfigurable dynamic endpoint, which has limitations. Instead better use the commands for better manual customization.** The autoconfiguration modules are deprecated and the author does not intend to support dynamic endpoint furthermore.
+
+## Dynamic endpoint
+
+### Simple usage
+
+Declare your NodeTypes and pass it to the SchemaConfigurator to get the schema. e.g.
 
 ```py
 # endpoint.py
@@ -130,7 +210,7 @@ schema = SchemaConfigurator([
 
 ```
 
-3. In your urls.py add the endpoint
+In your `urls.py` add the endpoint
 
 ```py
 # urls.py
@@ -147,8 +227,7 @@ urlpatterns = [
 
 It uses `FileUploadGraphQLView` from `graphene_file_upload.django` to support file uploads.
 
-Adding custom query and mutation types
------
+### Adding custom query and mutation types
 
 The `SchemaConfigurator` **instance** has `query` and `mutation` properties of type List, when instantiated.
 
@@ -176,8 +255,7 @@ schema = schema.schema() # overwrite schema with actual schema. This will create
 
 ```
 
-Configuring custom NodeType for node root field
------
+### Configuring custom NodeType for node root field
 
 Per relay specification the endpoint must implement `node` root field.
 The configured server implements the `node` root field with default configuration per graphene.
@@ -206,12 +284,11 @@ schema = schema.schema()
 
 ```
 
-Configuring NodeType subclasses
------
+### Configuring NodeType subclasses
 
 A subclass of NodeType can be configured via its Meta class.
 
-Available options are as follows: 
+Available options are as follows:
 
 **Following options can be configured on class Meta**:
 
@@ -236,8 +313,7 @@ Available options are as follows:
 
 - **get_queryset**: Callable - a static get_queryset method. Important! this method should be declared as staticmethod, it will be returned with the configured subclass of DjangoObjectType, queryset and info. It behaves as overwrite of get_queryset method, but is a staticmethod. See the example in [How to use](#how-to-use).
 
-Validators
------
+## Validators
 
 A validator passed to `field_validators` or `non_field_validators` is a function that takes the following arguments:
 
@@ -245,10 +321,9 @@ A validator passed to `field_validators` or `non_field_validators` is a function
 - **not_updated_model_instance**: the instance with the state before merging data with the instance
 - **info**: the graphene resolve info object instance.
 
-Permissions
------
+## Permissions
 
-We have extended DjangoObjectType and ClientIDMutation to support string permissions and class based permissions for queryset and object level permission checks.
+The addon has extended DjangoObjectType and ClientIDMutation to support string permissions and class based permissions for queryset and object level permission checks.
 
 Class based permissions extend custom `BasePermission` class, which implements `has_permission(self, info) -> bool` and `has_object_permission(self, info, obj) -> bool` methods. If the class returns `False` a permission-denied error will be raised. Following default permission classes can be found in graphene_relay_endpoint:
 
@@ -258,8 +333,7 @@ Class based permissions extend custom `BasePermission` class, which implements `
 - **IsAuthenticatedOrReadOnly**: Limits mutation operations to authenticated users.
 - **BasePermission**: A base class to subclass for custom permission classes.
 
-Useful subclasses and tools
------
+## Useful subclasses and tools
 
 The addon comes with builtin DjangoClientIDMutation abstract subclass, which implements following methods
 
@@ -271,13 +345,11 @@ The addon comes with builtin DjangoClientIDMutation abstract subclass, which imp
 
 N.B. DjangoClientIDMutation does not implement a `mutate_and_get_payload` classmethod, the developer must implement it on a subclass.
 
-License
------
+## License
 
 See the MIT licens in the LICENSE file in the project.
 
-Documentation
------
+## Documentation
 
 The addon is pretty simple. The [How to use](#how-to-use) and [Configuring NodeType subclasses](#configuring-nodetype-subclasses)  explains it all. Each piece of code is also documented with dockstrings and has respective type hints.
 For additional information read the respective documentation:
@@ -285,16 +357,10 @@ For additional information read the respective documentation:
 - **graphene_django**: <https://docs.graphene-python.org/projects/django/>
 - **graphene-file-upload**: <https://github.com/lmcgartland/graphene-file-upload>
 
-Tip the author
------
+## Tip the author
 
 If this project has facilitated your job, saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping (donating) the author with some crypto:
 
-**Opera browser wallet**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
+**Wallet**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
 
 Thank you!
-
-Client
------
-
-An ember client with ember-data style encapsulation layer is on the way.

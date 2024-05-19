@@ -135,7 +135,7 @@ The json file must have the following structure.
 
 **Overwrite** will not overwrite existing `urls` and `schema` modules.
 
-**Django relay endpoint comes with autoconfigurable dynamic endpoint, which has limitations. Instead better use the commands for better manual customization.**
+**Django relay endpoint comes with autoconfigurable dynamic endpoint, which has limitations. Instead better use the commands for better manual customization.** The autoconfiguration modules are deprecated and the author does not intend to support dynamic endpoint furthermore.
 
 ## Dynamic endpoint
 
@@ -259,7 +259,7 @@ schema = schema.schema()
 
 A subclass of NodeType can be configured via its Meta class.
 
-Available options are as follows: 
+Available options are as follows:
 
 **Following options can be configured on class Meta**:
 
