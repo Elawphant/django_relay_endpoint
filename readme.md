@@ -328,10 +328,4 @@ For additional information read the respective documentation:
 - **graphene_django**: <https://docs.graphene-python.org/projects/django/>
 - **graphene-file-upload**: <https://github.com/lmcgartland/graphene-file-upload>
 
-## Tip the author
-
-If this project has facilitated your job, saved time spent on boilerplate code and pain of standardizing and debugging a relay style endpoint, consider tipping (donating) the author with some crypto:
-
-**Wallet**: `3N5ot3DA2vSLwEqhjTGhfVnGaAuQoWBrCf`
-
 Thank you!
